@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   addEdge,
   Background,
@@ -17,6 +17,7 @@ import {
 } from "@xyflow/react";
 
 import Sidebar from "./Sidebar";
+import NodeModal from "./NodeModal";
 import { useDnD } from "../contexts/DnDContext";
 
 import "@xyflow/react/dist/style.css";
@@ -39,6 +40,9 @@ const AutomationBuilder = () => {
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // we load the data from the server on mount
   useEffect(() => {
@@ -83,9 +87,19 @@ const AutomationBuilder = () => {
       };
 
       setNodes((nds) => [...nds, newNode]);
+
+      // open modal on drop
+      setSelectedNode(newNode);
+      setIsModalOpen(true);
     },
     [screenToFlowPosition, type, setNodes]
   );
+
+  // open modal on click
+  const onNodeClick = (_, node) => {
+    setSelectedNode(node);
+    setIsModalOpen(true);
+  };
 
   return (
     <div className="automation-builder">
@@ -101,13 +115,29 @@ const AutomationBuilder = () => {
           onDrop={onDrop}
           onDragOver={onDragOver}
           nodeTypes={nodeTypes}
+          onNodeClick={onNodeClick}
         >
-          <MiniMap zoomable pannable />
+          {/* <MiniMap zoomable pannable /> */}
           <Controls />
           <Background />
         </ReactFlow>
       </div>
       <Sidebar />
+      {isModalOpen && selectedNode && (
+        <NodeModal
+          node={selectedNode}
+          onClose={() => setIsModalOpen(false)}
+          onSave={(label) => {
+            setNodes((nds) =>
+              nds.map((n) =>
+                n.id === selectedNode.id
+                  ? { ...n, data: { ...n.data, label } }
+                  : n
+              )
+            );
+          }}
+        />
+      )}
     </div>
   );
 };
