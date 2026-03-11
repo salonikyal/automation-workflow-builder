@@ -233,3 +233,31 @@
         max-height: 80%;
     }
 }
+
+
+/** Reactflow **/
+
+.react-flow__controls button {
+    color: #333;
+}
+
+.react-flow__controls button:hover {
+    background-color: #333;
+    color:#fff
+}
+
+.automation-builder .react-flow__node {
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #333;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: all 0.15s ease;
+}
+
+.automation-builder .react-flow__node:hover {
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
