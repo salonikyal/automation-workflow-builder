@@ -101,6 +101,22 @@ const AutomationBuilder = () => {
     setIsModalOpen(true);
   };
 
+  //persist changes in worflow state
+  const handleSave = useCallback(
+    (label: string) => {
+      if (!selectedNode) return;     
+      setNodes((nds) =>
+        nds.map((node) =>
+          node.id === selectedNode.id
+            ? { ...node, data: { ...node.data, label } }
+            : node
+        )
+      );
+      setIsModalOpen(false);
+    },
+    [selectedNode, setNodes]
+  );
+
   return (
     <div className="automation-builder">
       <div className="reactflow-wrapper" ref={reactFlowWrapper}>
@@ -127,15 +143,7 @@ const AutomationBuilder = () => {
         <NodeModal
           node={selectedNode}
           onClose={() => setIsModalOpen(false)}
-          onSave={(label) => {
-            setNodes((nds) =>
-              nds.map((n) =>
-                n.id === selectedNode.id
-                  ? { ...n, data: { ...n.data, label } }
-                  : n
-              )
-            );
-          }}
+          onSave={handleSave}
         />
       )}
     </div>
