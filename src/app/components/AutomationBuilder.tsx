@@ -35,7 +35,7 @@ const nodeTypes: NodeTypes = {
 const AutomationBuilder = () => {
   const reactFlowWrapper = useRef(null);
 
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, fitView } = useReactFlow();
   const { type } = useDnD();
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -81,6 +81,12 @@ const AutomationBuilder = () => {
     event.dataTransfer.dropEffect = "move";
   }, []);
 
+  const onNodeDragStop = useCallback(() => {
+    setTimeout(() => {
+      fitView({ padding: 0.2, duration: 500 });
+    }, 0);
+  }, [fitView]);
+
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       try {
@@ -103,6 +109,10 @@ const AutomationBuilder = () => {
         };
   
         setNodes((nds) => [...nds, newNode]);
+
+        setTimeout(() => {
+          fitView({ padding: 0.2 });
+        }, 0);
   
         setSelectedNode(newNode);
         setIsModalOpen(true);
@@ -112,7 +122,7 @@ const AutomationBuilder = () => {
         setError(err.message || "Failed to create node");
       }
     },
-    [screenToFlowPosition, type, setNodes]
+    [screenToFlowPosition, type, setNodes, fitView]
   );
 
   // open modal on click
@@ -146,6 +156,7 @@ const AutomationBuilder = () => {
 
   return (
     <div className="automation-builder">
+      <Sidebar />
       <div className="reactflow-wrapper" ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
@@ -158,6 +169,7 @@ const AutomationBuilder = () => {
           fitView
           className="overview"
           onDrop={onDrop}
+          onNodeDragStop={onNodeDragStop}
           onDragOver={onDragOver}
           nodeTypes={nodeTypes}
         >
@@ -166,7 +178,6 @@ const AutomationBuilder = () => {
           <Background />
         </ReactFlow>
       </div>
-      <Sidebar />
       {isModalOpen && selectedNode && (
         <NodeModal
           key={selectedNode.id}
