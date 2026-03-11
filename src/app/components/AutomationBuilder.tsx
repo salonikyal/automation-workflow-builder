@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   addEdge,
   Background,
@@ -17,11 +17,12 @@ import {
 } from "@xyflow/react";
 
 import Sidebar from "./Sidebar";
+import NodeModal from "./NodeModal";
+import EmailNode from "./nodes/EmailNode";
 import { useDnD } from "../contexts/DnDContext";
 
 import "@xyflow/react/dist/style.css";
 import "./styles.css";
-import EmailNode from "./nodes/EmailNode";
 
 let id = 0;
 const getId = () => `dndnode_${id++}`;
@@ -40,20 +41,38 @@ const AutomationBuilder = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   // we load the data from the server on mount
   useEffect(() => {
     const getData = async () => {
-      const data = await fetch("/api/automation");
-      const automation = await data.json();
-      setNodes(automation.nodes);
-      setEdges(automation.edges);
+      try {
+        const res = await fetch("/api/automation");
+        if (!res.ok) throw new Error("Failed to fetch automation workflow");
+
+        const automation = await res.json();
+        setNodes(automation.nodes || []);
+        setEdges(automation.edges || []);
+      } catch (err: any) {
+        console.error(err);
+        setError(err.message || "Unable to load workflow");
+      }
     };
     getData();
   }, [setNodes, setEdges]);
 
   // various callbacks
   const onConnect: OnConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
+    (params) => {
+      try {
+        setEdges((eds) => addEdge(params, eds));
+      } catch (err) {
+        console.error(err);
+        setError("Failed to connect nodes");
+      }
+    },
     [setEdges]
   );
 
@@ -64,27 +83,65 @@ const AutomationBuilder = () => {
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
-      event.preventDefault();
-
-      // check if the dropped element is valid
-      if (!type) {
-        return;
+      try {
+        event.preventDefault();
+  
+        if (!type) {
+          throw new Error("Invalid node type dropped");
+        }
+  
+        const position = screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+  
+        const newNode: Node = {
+          id: getId(),
+          type,
+          position,
+          data: { label: `${type} node` },
+        };
+  
+        setNodes((nds) => [...nds, newNode]);
+  
+        setSelectedNode(newNode);
+        setIsModalOpen(true);
+  
+      } catch (err: any) {
+        console.error(err);
+        setError(err.message || "Failed to create node");
       }
-
-      const position = screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-      const newNode = {
-        id: getId(),
-        type,
-        position,
-        data: { label: `${type} node` },
-      };
-
-      setNodes((nds) => [...nds, newNode]);
     },
     [screenToFlowPosition, type, setNodes]
+  );
+
+  // open modal on click
+  const onNodeClick = (_, node) => {
+    setSelectedNode(node);
+    setIsModalOpen(true);
+  };
+
+  //persist changes in worflow state
+  const handleSave = useCallback(
+    (label: string) => {
+      if (!selectedNode) return;
+
+      try {
+        setNodes((nds) =>
+          nds.map((node) =>
+            node.id === selectedNode.id
+              ? { ...node, data: { ...node.data, label } }
+              : node
+          )
+        );
+
+        setIsModalOpen(false);
+      } catch (err: any) {
+        console.error(err);
+        setError(err.message || "Failed to save node changes");
+      }
+    },
+    [selectedNode, setNodes]
   );
 
   return (
@@ -96,18 +153,28 @@ const AutomationBuilder = () => {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onNodeClick={onNodeClick}
+          //onNodeDoubleClick={onNodeClick}
           fitView
           className="overview"
           onDrop={onDrop}
           onDragOver={onDragOver}
           nodeTypes={nodeTypes}
         >
-          <MiniMap zoomable pannable />
+          {/* <MiniMap zoomable pannable /> */}
           <Controls />
           <Background />
         </ReactFlow>
       </div>
       <Sidebar />
+      {isModalOpen && selectedNode && (
+        <NodeModal
+          key={selectedNode.id}
+          node={selectedNode}
+          onClose={() => setIsModalOpen(false)}
+          onSave={handleSave}
+        />
+      )}
     </div>
   );
 };
