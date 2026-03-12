@@ -29,6 +29,7 @@ import {
 } from "./nodes";
 import { useDnD } from "@/app/contexts/DnDContext";
 import { handleNodeDrop } from "@/app/services/dndService";
+import {saveWorkflow, exportWorkflow} from "@/app/services/workflowService"
 
 import "@xyflow/react/dist/style.css";
 import "./styles.css";
@@ -170,10 +171,31 @@ const AutomationBuilder = () => {
     [nodes, edges, setNodes, setEdges]
   );
 
+  const handleSaveWorkflow = useCallback(async () => {
+    const workflow: Workflow = { nodes, edges, name: "Autoflow" };
+  
+    try {
+      await saveWorkflow(workflow);
+      alert("Workflow saved successfully!");
+    } catch (err: any) {
+      alert(err.message || "Error saving workflow");
+    }
+  }, [nodes, edges]);
+
+  const handleExportWorkflow = useCallback(() => {
+    const workflow: Workflow = { nodes, edges, name: "Autoflow" };
+    exportWorkflow(workflow);
+  }, [nodes, edges]);
+  
+
 
   return (
     <div className="automation-builder">
       <Sidebar />
+      <div className="workflow-actions">
+        <button onClick={handleSaveWorkflow}>Save</button>
+        <button onClick={handleExportWorkflow}>Export</button>
+      </div>
       <div className="reactflow-wrapper" ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
