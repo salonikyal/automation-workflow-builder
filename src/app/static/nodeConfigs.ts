@@ -9,9 +9,9 @@ import {
   } from "react-icons/fi";
   
   export const nodeConfigs = {
-    trigger: {
-      type: "trigger",
-      label: "Trigger",
+    start: {
+      type: "start",
+      label: "Start",
       icon: FiPlay,
       color: "#228be6",
       fields: [],

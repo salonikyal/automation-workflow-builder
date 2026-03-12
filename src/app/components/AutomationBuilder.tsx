@@ -29,7 +29,10 @@ import {
 } from "./nodes";
 import { useDnD } from "@/app/contexts/DnDContext";
 import { handleNodeDrop } from "@/app/services/dndService";
-import {saveWorkflow, exportWorkflow} from "@/app/services/workflowService"
+import {Workflow, saveWorkflow, exportWorkflow, getWorkflow} from "@/app/services/workflowService"
+import { emailWorkflow } from "@/app/static/templates/emailWorkflow";
+import { deleteNodes } from "@/app/services/nodeService";
+
 
 import "@xyflow/react/dist/style.css";
 import "./styles.css";
@@ -56,27 +59,42 @@ const AutomationBuilder = () => {
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [workflowId, setWorkflowId] = useState<number | null>(null);
 
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // we load the data from the server on mount
-  useEffect(() => {
-    const getData = async () => {
-      try {
-        const res = await fetch("/api/automation");
-        if (!res.ok) throw new Error("Failed to fetch automation workflow");
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
 
-        const automation = await res.json();
-        setNodes(automation.nodes || []);
-        setEdges(automation.edges || []);
-      } catch (err: any) {
+  useEffect(() => {
+    const fetchAllWorkflows = async () => {
+      try {
+        const data = await getWorkflow();
+        setWorkflows(Array.isArray(data) ? data : [data]);
+      } catch (err) {
         console.error(err);
-        setError(err.message || "Unable to load workflow");
       }
     };
-    getData();
+  
+    fetchAllWorkflows();
+  }, []);
+
+  // Load the template workflow
+  useEffect(() => {
+    try {
+      if (!emailWorkflow || !emailWorkflow.nodes || !emailWorkflow.edges) {
+        throw new Error("Workflow template is invalid or missing nodes/edges");
+      }
+      const validNodes = emailWorkflow.nodes.filter(Boolean);
+  
+      setNodes([...validNodes]);
+      setEdges([...emailWorkflow.edges]);
+    } catch (err: any) {
+      console.error("Failed to load workflow template:", err);
+      setNodes([]);
+      setEdges([]);
+    }
   }, [setNodes, setEdges]);
 
   // various callbacks
@@ -136,6 +154,20 @@ const AutomationBuilder = () => {
     setIsModalOpen(true);
   };
 
+  const onNodesDelete = useCallback(
+    (deletedNodes: Node[]) => {
+      const deletableNodes = deletedNodes.filter((n) => n.type !== "start");
+      const { remainingNodes, remainingEdges } = deleteNodes(
+        nodes,
+        edges,
+        deletableNodes.map((n) => n.id)
+      );
+      setNodes(remainingNodes);
+      setEdges(remainingEdges);
+    },
+    [nodes, edges, setNodes, setEdges]
+  );
+
   //persist changes in worflow state
   const handleSaveNode = useCallback(
     (formData: Record<string, any>) => {
@@ -157,27 +189,23 @@ const AutomationBuilder = () => {
     [selectedNode, setNodes]
   );
 
-  const onNodesDelete = useCallback(
-    (deletedNodes: Node[]) => {
-      const deletableNodes = deletedNodes.filter((n) => n.type !== "start");
-      const { remainingNodes, remainingEdges } = deleteNodes(
+  const handleSaveWorkflow = useCallback(async () => {
+    try {
+      if (!nodes.length || !edges.length) {
+        throw new Error("Cannot save workflow: nodes or edges are empty");
+      }
+  
+      const workflow: Workflow = {
+        name: "Autoflow",
         nodes,
         edges,
-        deletableNodes.map((n) => n.id)
-      );
-      setNodes(remainingNodes);
-      setEdges(remainingEdges);
-    },
-    [nodes, edges, setNodes, setEdges]
-  );
-
-  const handleSaveWorkflow = useCallback(async () => {
-    const workflow: Workflow = { nodes, edges, name: "Autoflow" };
+      };
   
-    try {
-      await saveWorkflow(workflow);
-      alert("Workflow saved successfully!");
+      const saved = await saveWorkflow(workflow);
+  
+      alert(`Workflow saved successfully! ID: ${saved.id}`);
     } catch (err: any) {
+      console.error("Save workflow failed:", err);
       alert(err.message || "Error saving workflow");
     }
   }, [nodes, edges]);
@@ -204,10 +232,10 @@ const AutomationBuilder = () => {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodesDelete={onNodesDelete}
-          onNodeClick={onNodeClick}
-          // onNodeDoubleClick={onNodeClick}
-          // fitView
-          defaultViewport={{ x: 0, y: 0, zoom: 2 }}
+          //onNodeClick={onNodeClick}
+          onNodeDoubleClick={onNodeClick}
+          fitView
+          //defaultViewport={{ x: 0, y: 0, zoom: 2 }}
           className="overview"
           onDrop={onDrop}
           onNodeDragStop={onNodeDragStop}
