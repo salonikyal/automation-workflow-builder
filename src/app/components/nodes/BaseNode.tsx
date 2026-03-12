@@ -17,14 +17,6 @@ export default function BaseNode({ id, data, type }: BaseNodeProps) {
   const Icon = data.icon;
   const { setNodes, setEdges } = useReactFlow()
 
-  // const deleteNode = () => {
-  //   if (type === "start") return;
-  //   setNodes((nds) => nds.filter((node) => node.id !== id));
-  //   setEdges((eds) =>
-  //     eds.filter((e) => e.source !== id && e.target !== id)
-  //   );
-  // };
-
   return (
     <>
       {Icon && (
