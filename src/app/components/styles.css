@@ -6,14 +6,14 @@
     display: flex;
     flex-direction: row;
     width: 100vw;
-    height: 100vh;      
+    height: 100vh;
     overflow: hidden;
 }
 
 .automation-builder .reactflow-wrapper {
     flex-grow: 1;
-    height: 100%; 
-    min-width: 0; 
+    height: 100%;
+    min-width: 0;
     background: #dedede;
 }
 
@@ -43,7 +43,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin: 20px;
     font-weight: 500;
     font-size: 0.9rem;
     color: #495057;
@@ -208,7 +208,8 @@
     filter: brightness(0.9);
 }
 
-.modal input {
+.modal input,
+.modal textarea {
     margin-top: 6px;
     padding: 6px 10px;
     border: 1px solid #ccc;
@@ -223,8 +224,8 @@
     .automation-builder aside.sidebar {
         width: 60px;
         padding: 15px 8px;
-      }
-    .sidebar-header span,
+    }
+    .sidebar-header h2,
     .node-label {
         display: none;
     }
@@ -243,10 +244,14 @@
 
 .react-flow__controls button:hover {
     background-color: #333;
-    color:#fff
+    color: #fff
 }
 
 .automation-builder .react-flow__node {
+    display: flex;
+    align-items: center;     
+    gap: 6px;
+    min-width: 160px;
     background: #ffffff;
     border: 1px solid #dee2e6;
     border-radius: 8px;
@@ -254,10 +259,15 @@
     font-size: 0.85rem;
     font-weight: 500;
     color: #333;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     transition: all 0.15s ease;
 }
 
 .automation-builder .react-flow__node:hover {
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.automation-builder .react-flow__node .node-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
 }

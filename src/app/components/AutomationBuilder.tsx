@@ -18,8 +18,17 @@ import {
 
 import Sidebar from "./Sidebar";
 import NodeModal from "./NodeModal";
-import EmailNode from "./nodes/EmailNode";
-import { useDnD } from "../contexts/DnDContext";
+import {
+  TriggerNode,
+  WebhookNode,
+  ConditionNode,
+  DelayNode,
+  EmailNode,
+  TransformNode,
+  EndNode
+} from "./nodes";
+import { useDnD } from "@/app/contexts/DnDContext";
+import { nodeConfigs } from "@/app/static/nodeConfigs";
 
 import "@xyflow/react/dist/style.css";
 import "./styles.css";
@@ -29,7 +38,13 @@ const getId = () => `dndnode_${id++}`;
 
 // list of possible node types
 const nodeTypes: NodeTypes = {
+  start: TriggerNode,
+  webhook: WebhookNode,
+  condition: ConditionNode,
+  delay: DelayNode,
   email: EmailNode,
+  transform: TransformNode,
+  end: EndNode,
 };
 
 const AutomationBuilder = () => {
@@ -96,33 +111,42 @@ const AutomationBuilder = () => {
           throw new Error("Invalid node type dropped");
         }
   
-        const position = screenToFlowPosition({
-          x: event.clientX,
-          y: event.clientY,
-        });
+        const nodeInfo = nodeConfigs[type];
+        if (!nodeInfo) return;
   
-        const newNode: Node = {
-          id: getId(),
-          type,
-          position,
-          data: { label: `${type} node` },
-        };
+        setNodes((nds) => {
+          const lastNode = nds[nds.length - 1];
   
-        setNodes((nds) => [...nds, newNode]);
+          // to stack nodes vertically
+          const position = lastNode
+            ? {
+                x: lastNode.position.x,
+                y: lastNode.position.y + 80,
+              }
+            : screenToFlowPosition({
+                x: event.clientX,
+                y: event.clientY,
+              });
+  
+          const newNode: Node = {
+            id: getId(),
+            type: nodeInfo.type,
+            position,
+            data: { ...nodeInfo },
+          };
+          const updatedNodes = [...nds, newNode];
+  
+          setSelectedNode(newNode);
+          setIsModalOpen(true);
 
-        setTimeout(() => {
-          fitView({ padding: 0.2 });
-        }, 0);
-  
-        setSelectedNode(newNode);
-        setIsModalOpen(true);
-  
+          return updatedNodes;
+        });
       } catch (err: any) {
         console.error(err);
         setError(err.message || "Failed to create node");
       }
     },
-    [screenToFlowPosition, type, setNodes, fitView]
+    [screenToFlowPosition, type, setNodes]
   );
 
   // open modal on click

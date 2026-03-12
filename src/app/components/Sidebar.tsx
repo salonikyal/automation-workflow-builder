@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useDnD } from "../contexts/DnDContext";
 import { FiArrowLeft, FiArrowRight} from "react-icons/fi";
-import { nodesList } from "../data/nodesList";
+import { useDnD } from "@/app/contexts/DnDContext";
+import { nodeList } from "@/app/static/nodeConfigs";
 import "./styles.css";
 
 const Sidebar = () => {
@@ -38,13 +38,14 @@ const Sidebar = () => {
       </div>
 
       <div className="node-list">
-        {nodesList.map((node) => {
+        {nodeList.map((node) => {
           const Icon = node.icon;
           return (
             <div
               key={node.type}
               className="dndnode"
               draggable
+              title="Drag to place on the workflow"
               onDragStart={(e) => onDragStart(e, node.type)}
             >
               <Icon style={{ color: node.color }} className="node-icon" />
