@@ -28,7 +28,7 @@ import {
   EndNode
 } from "./nodes";
 import { useDnD } from "@/app/contexts/DnDContext";
-import { nodeConfigs } from "@/app/static/nodeConfigs";
+import { handleNodeDrop } from "@/app/services/dndService";
 
 import "@xyflow/react/dist/style.css";
 import "./styles.css";
@@ -106,55 +106,27 @@ const AutomationBuilder = () => {
     (event: React.DragEvent) => {
       try {
         event.preventDefault();
-  
+
         if (!type) {
           throw new Error("Invalid node type dropped");
         }
-  
-        const nodeInfo = nodeConfigs[type];
-        if (!nodeInfo) return;
-  
-        setNodes((nds) => {
-          const lastNode = nds[nds.length - 1];
-  
-          // to stack nodes vertically
-          const position = lastNode
-            ? {
-                x: lastNode.position.x,
-                y: lastNode.position.y + 80,
-              }
-            : screenToFlowPosition({
-                x: event.clientX,
-                y: event.clientY,
-              });
-  
-          const newNode: Node = {
-            id: getId(),
-            type: nodeInfo.type,
-            position,
-            data: { ...nodeInfo },
-          };
-          const updatedNodes = [...nds, newNode];
-  
-          setSelectedNode(newNode);
-          setIsModalOpen(true);
-  
-          // scroll down on node drop
-          if (reactFlowWrapper.current) {
-            reactFlowWrapper.current.scrollBy({
-              top: 150,
-              behavior: "smooth",
-            });
-          }
-  
-          return updatedNodes;
-        });
+
+        handleNodeDrop(
+          type,
+          event,
+          nodes,
+          setNodes,
+          (e) => screenToFlowPosition(e, reactFlowWrapper.current),
+          setSelectedNode,
+          setIsModalOpen
+        );
+
       } catch (err: any) {
         console.error(err);
         setError(err.message || "Failed to create node");
       }
     },
-    [screenToFlowPosition, type, setNodes]
+    [screenToFlowPosition, type, nodes, setNodes]
   );
 
   // open modal on click
@@ -164,19 +136,17 @@ const AutomationBuilder = () => {
   };
 
   //persist changes in worflow state
-  const handleSave = useCallback(
-    (label: string) => {
+  const handleSaveNode = useCallback(
+    (formData: Record<string, any>) => {
       if (!selectedNode) return;
-
       try {
         setNodes((nds) =>
           nds.map((node) =>
             node.id === selectedNode.id
-              ? { ...node, data: { ...node.data, label } }
+              ? { ...node, data: { ...node.data, ...formData } }
               : node
           )
         );
-
         setIsModalOpen(false);
       } catch (err: any) {
         console.error(err);
@@ -187,20 +157,19 @@ const AutomationBuilder = () => {
   );
 
   const onNodesDelete = useCallback(
-    (deleted) => {
-      const deletableNodes = deleted.filter((node) => node.type !== "start");
-      setNodes((nds) =>
-        nds.filter((n) => !deletableNodes.some((d) => d.id === n.id))
+    (deletedNodes: Node[]) => {
+      const deletableNodes = deletedNodes.filter((n) => n.type !== "start");
+      const { remainingNodes, remainingEdges } = deleteNodes(
+        nodes,
+        edges,
+        deletableNodes.map((n) => n.id)
       );
-      setEdges((eds) =>
-        eds.filter(
-          (e) =>
-            !deletableNodes.some((d) => d.id === e.source || d.id === e.target)
-        )
-      );
+      setNodes(remainingNodes);
+      setEdges(remainingEdges);
     },
-    [setNodes, setEdges]
+    [nodes, edges, setNodes, setEdges]
   );
+
 
   return (
     <div className="automation-builder">
@@ -233,7 +202,7 @@ const AutomationBuilder = () => {
           key={selectedNode.id}
           node={selectedNode}
           onClose={() => setIsModalOpen(false)}
-          onSave={handleSave}
+          onSave={handleSaveNode}
         />
       )}
     </div>
