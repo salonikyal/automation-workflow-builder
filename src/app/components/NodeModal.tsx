@@ -32,7 +32,7 @@ export default function NodeModal({ node, onSave, onClose }: NodeModalProps) {
     return (
         <div className="modal-overlay">
             <div className="modal">
-                <h2>Edit Node</h2>
+                <span>Properties</span>
 
                 <label>Node Label</label>
                 <input
@@ -54,7 +54,7 @@ export default function NodeModal({ node, onSave, onClose }: NodeModalProps) {
                     >
                         Save
                     </button>
-                    <button onClick={onClose}>Cancel</button>
+                    <button onClick={onClose}>Close</button>
                 </div>
             </div>
         </div>
