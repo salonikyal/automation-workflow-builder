@@ -28,7 +28,11 @@ import {
   EndNode
 } from "./nodes";
 import { useDnD } from "@/app/contexts/DnDContext";
-import { nodeConfigs } from "@/app/static/nodeConfigs";
+import { handleNodeDrop } from "@/app/services/dndService";
+import {Workflow, saveWorkflow, exportWorkflow, getWorkflow} from "@/app/services/workflowService"
+import { emailWorkflow } from "@/app/static/templates/emailWorkflow";
+import { deleteNodes } from "@/app/services/nodeService";
+
 
 import "@xyflow/react/dist/style.css";
 import "./styles.css";
@@ -55,27 +59,42 @@ const AutomationBuilder = () => {
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [workflowId, setWorkflowId] = useState<number | null>(null);
 
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // we load the data from the server on mount
-  useEffect(() => {
-    const getData = async () => {
-      try {
-        const res = await fetch("/api/automation");
-        if (!res.ok) throw new Error("Failed to fetch automation workflow");
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
 
-        const automation = await res.json();
-        setNodes(automation.nodes || []);
-        setEdges(automation.edges || []);
-      } catch (err: any) {
+  useEffect(() => {
+    const fetchAllWorkflows = async () => {
+      try {
+        const data = await getWorkflow();
+        setWorkflows(Array.isArray(data) ? data : [data]);
+      } catch (err) {
         console.error(err);
-        setError(err.message || "Unable to load workflow");
       }
     };
-    getData();
+  
+    fetchAllWorkflows();
+  }, []);
+
+  // Load the template workflow
+  useEffect(() => {
+    try {
+      if (!emailWorkflow || !emailWorkflow.nodes || !emailWorkflow.edges) {
+        throw new Error("Workflow template is invalid or missing nodes/edges");
+      }
+      const validNodes = emailWorkflow.nodes.filter(Boolean);
+  
+      setNodes([...validNodes]);
+      setEdges([...emailWorkflow.edges]);
+    } catch (err: any) {
+      console.error("Failed to load workflow template:", err);
+      setNodes([]);
+      setEdges([]);
+    }
   }, [setNodes, setEdges]);
 
   // various callbacks
@@ -106,55 +125,27 @@ const AutomationBuilder = () => {
     (event: React.DragEvent) => {
       try {
         event.preventDefault();
-  
+
         if (!type) {
           throw new Error("Invalid node type dropped");
         }
-  
-        const nodeInfo = nodeConfigs[type];
-        if (!nodeInfo) return;
-  
-        setNodes((nds) => {
-          const lastNode = nds[nds.length - 1];
-  
-          // to stack nodes vertically
-          const position = lastNode
-            ? {
-                x: lastNode.position.x,
-                y: lastNode.position.y + 80,
-              }
-            : screenToFlowPosition({
-                x: event.clientX,
-                y: event.clientY,
-              });
-  
-          const newNode: Node = {
-            id: getId(),
-            type: nodeInfo.type,
-            position,
-            data: { ...nodeInfo },
-          };
-          const updatedNodes = [...nds, newNode];
-  
-          setSelectedNode(newNode);
-          setIsModalOpen(true);
-  
-          // scroll down on node drop
-          if (reactFlowWrapper.current) {
-            reactFlowWrapper.current.scrollBy({
-              top: 150,
-              behavior: "smooth",
-            });
-          }
-  
-          return updatedNodes;
-        });
+
+        handleNodeDrop(
+          type,
+          event,
+          nodes,
+          setNodes,
+          (e) => screenToFlowPosition(e, reactFlowWrapper.current),
+          setSelectedNode,
+          setIsModalOpen
+        );
+
       } catch (err: any) {
         console.error(err);
         setError(err.message || "Failed to create node");
       }
     },
-    [screenToFlowPosition, type, setNodes]
+    [screenToFlowPosition, type, nodes, setNodes]
   );
 
   // open modal on click
@@ -163,20 +154,32 @@ const AutomationBuilder = () => {
     setIsModalOpen(true);
   };
 
-  //persist changes in worflow state
-  const handleSave = useCallback(
-    (label: string) => {
-      if (!selectedNode) return;
+  const onNodesDelete = useCallback(
+    (deletedNodes: Node[]) => {
+      const deletableNodes = deletedNodes.filter((n) => n.type !== "start");
+      const { remainingNodes, remainingEdges } = deleteNodes(
+        nodes,
+        edges,
+        deletableNodes.map((n) => n.id)
+      );
+      setNodes(remainingNodes);
+      setEdges(remainingEdges);
+    },
+    [nodes, edges, setNodes, setEdges]
+  );
 
+  //persist changes in worflow state
+  const handleSaveNode = useCallback(
+    (formData: Record<string, any>) => {
+      if (!selectedNode) return;
       try {
         setNodes((nds) =>
           nds.map((node) =>
             node.id === selectedNode.id
-              ? { ...node, data: { ...node.data, label } }
+              ? { ...node, data: { ...node.data, ...formData } }
               : node
           )
         );
-
         setIsModalOpen(false);
       } catch (err: any) {
         console.error(err);
@@ -186,25 +189,41 @@ const AutomationBuilder = () => {
     [selectedNode, setNodes]
   );
 
-  const onNodesDelete = useCallback(
-    (deleted) => {
-      const deletableNodes = deleted.filter((node) => node.type !== "start");
-      setNodes((nds) =>
-        nds.filter((n) => !deletableNodes.some((d) => d.id === n.id))
-      );
-      setEdges((eds) =>
-        eds.filter(
-          (e) =>
-            !deletableNodes.some((d) => d.id === e.source || d.id === e.target)
-        )
-      );
-    },
-    [setNodes, setEdges]
-  );
+  const handleSaveWorkflow = useCallback(async () => {
+    try {
+      if (!nodes.length || !edges.length) {
+        throw new Error("Cannot save workflow: nodes or edges are empty");
+      }
+  
+      const workflow: Workflow = {
+        name: "Autoflow",
+        nodes,
+        edges,
+      };
+  
+      const saved = await saveWorkflow(workflow);
+  
+      alert(`Workflow saved successfully! ID: ${saved.id}`);
+    } catch (err: any) {
+      console.error("Save workflow failed:", err);
+      alert(err.message || "Error saving workflow");
+    }
+  }, [nodes, edges]);
+
+  const handleExportWorkflow = useCallback(() => {
+    const workflow: Workflow = { nodes, edges, name: "Autoflow" };
+    exportWorkflow(workflow);
+  }, [nodes, edges]);
+  
+
 
   return (
     <div className="automation-builder">
       <Sidebar />
+      <div className="workflow-actions">
+        <button onClick={handleSaveWorkflow}>Save</button>
+        <button onClick={handleExportWorkflow}>Export</button>
+      </div>
       <div className="reactflow-wrapper" ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
@@ -213,10 +232,10 @@ const AutomationBuilder = () => {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodesDelete={onNodesDelete}
-          onNodeClick={onNodeClick}
-          // onNodeDoubleClick={onNodeClick}
-          // fitView
-          defaultViewport={{ x: 0, y: 0, zoom: 2 }}
+          //onNodeClick={onNodeClick}
+          onNodeDoubleClick={onNodeClick}
+          fitView
+          //defaultViewport={{ x: 0, y: 0, zoom: 2 }}
           className="overview"
           onDrop={onDrop}
           onNodeDragStop={onNodeDragStop}
@@ -233,7 +252,7 @@ const AutomationBuilder = () => {
           key={selectedNode.id}
           node={selectedNode}
           onClose={() => setIsModalOpen(false)}
-          onSave={handleSave}
+          onSave={handleSaveNode}
         />
       )}
     </div>

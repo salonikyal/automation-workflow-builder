@@ -12,7 +12,7 @@ type NodeModalProps = {
 export default function NodeModal({ node, onSave, onClose }: NodeModalProps) {
     const [label, setLabel] = useState(node.data.label || "");
     const config = node.data || { fields: [] };
-    const [formData, setFormData] = useState<any>({ ...node.data });
+    const [formData, setFormData] = useState<Record<string, any>>({ ...node.data });
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {

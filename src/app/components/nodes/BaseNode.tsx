@@ -15,7 +15,6 @@ type BaseNodeProps = {
 
 export default function BaseNode({ id, data, type }: BaseNodeProps) {
   const Icon = data.icon;
-  const { setNodes, setEdges } = useReactFlow()
 
   return (
     <>
