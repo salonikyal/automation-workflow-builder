@@ -138,7 +138,15 @@ const AutomationBuilder = () => {
   
           setSelectedNode(newNode);
           setIsModalOpen(true);
-
+  
+          // scroll down on node drop
+          if (reactFlowWrapper.current) {
+            reactFlowWrapper.current.scrollBy({
+              top: 150,
+              behavior: "smooth",
+            });
+          }
+  
           return updatedNodes;
         });
       } catch (err: any) {
@@ -178,6 +186,22 @@ const AutomationBuilder = () => {
     [selectedNode, setNodes]
   );
 
+  const onNodesDelete = useCallback(
+    (deleted) => {
+      const deletableNodes = deleted.filter((node) => node.type !== "start");
+      setNodes((nds) =>
+        nds.filter((n) => !deletableNodes.some((d) => d.id === n.id))
+      );
+      setEdges((eds) =>
+        eds.filter(
+          (e) =>
+            !deletableNodes.some((d) => d.id === e.source || d.id === e.target)
+        )
+      );
+    },
+    [setNodes, setEdges]
+  );
+
   return (
     <div className="automation-builder">
       <Sidebar />
@@ -188,9 +212,11 @@ const AutomationBuilder = () => {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onNodesDelete={onNodesDelete}
           onNodeClick={onNodeClick}
-          //onNodeDoubleClick={onNodeClick}
-          fitView
+          // onNodeDoubleClick={onNodeClick}
+          // fitView
+          defaultViewport={{ x: 0, y: 0, zoom: 2 }}
           className="overview"
           onDrop={onDrop}
           onNodeDragStop={onNodeDragStop}
