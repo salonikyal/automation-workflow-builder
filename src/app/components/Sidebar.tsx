@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { useDnD } from "../contexts/DnDContext";
-import { FiArrowLeft, FiArrowRight, FiCircle, FiSquare, FiTarget } from "react-icons/fi";
+import { FiArrowLeft, FiArrowRight} from "react-icons/fi";
+import { useDnD } from "@/app/contexts/DnDContext";
+import { nodeList } from "@/app/static/nodeConfigs";
 import "./styles.css";
 
 const Sidebar = () => {
@@ -27,33 +28,31 @@ const Sidebar = () => {
 
   const toggleSidebar = () => setCollapsed(!collapsed);
 
-  const nodes = [
-    { type: "input", label: "Input Node", icon: <FiCircle /> },
-    { type: "default", label: "Default Node", icon: <FiSquare /> },
-    { type: "output", label: "Output Node", icon: <FiTarget /> },
-  ];
-
   return (
     <aside className={`sidebar ${collapsed ? "collapsed" : ""}`}>
       <div className="sidebar-header">
-        {!collapsed && <span>Actions</span>}
+        {!collapsed && <h2>Actions</h2>}
         <button onClick={toggleSidebar} className="toggle-btn">
           {collapsed ? <FiArrowRight /> : <FiArrowLeft />}
         </button>
       </div>
 
       <div className="node-list">
-        {nodes.map((node) => (
-          <div
-            key={node.type}
-            className={`dndnode ${node.type}`}
-            onDragStart={(event) => onDragStart(event, node.type)}
-            draggable
-          >
-            <span className="node-icon">{node.icon}</span>
-            {!collapsed && <span className="node-label">{node.label}</span>}
-          </div>
-        ))}
+        {nodeList.map((node) => {
+          const Icon = node.icon;
+          return (
+            <div
+              key={node.type}
+              className="dndnode"
+              draggable
+              title="Drag to place on the workflow"
+              onDragStart={(e) => onDragStart(e, node.type)}
+            >
+              <Icon style={{ color: node.color }} className="node-icon" />
+              {!collapsed && <span className="node-label">{node.label}</span>}
+            </div>
+          );
+        })}
       </div>
     </aside>
   );

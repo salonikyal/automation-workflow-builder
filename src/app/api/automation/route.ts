@@ -1,4 +1,4 @@
-import { initialEdges, initialNodes } from "@/app/Constants";
+import { initialEdges, initialNodes } from "@/app/static/initialNodes";
 import { NextRequest } from "next/server";
 
 export async function GET() {

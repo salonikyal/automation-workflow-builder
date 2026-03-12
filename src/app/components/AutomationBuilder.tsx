@@ -18,8 +18,17 @@ import {
 
 import Sidebar from "./Sidebar";
 import NodeModal from "./NodeModal";
-import EmailNode from "./nodes/EmailNode";
-import { useDnD } from "../contexts/DnDContext";
+import {
+  TriggerNode,
+  WebhookNode,
+  ConditionNode,
+  DelayNode,
+  EmailNode,
+  TransformNode,
+  EndNode
+} from "./nodes";
+import { useDnD } from "@/app/contexts/DnDContext";
+import { nodeConfigs } from "@/app/static/nodeConfigs";
 
 import "@xyflow/react/dist/style.css";
 import "./styles.css";
@@ -29,7 +38,13 @@ const getId = () => `dndnode_${id++}`;
 
 // list of possible node types
 const nodeTypes: NodeTypes = {
+  start: TriggerNode,
+  webhook: WebhookNode,
+  condition: ConditionNode,
+  delay: DelayNode,
   email: EmailNode,
+  transform: TransformNode,
+  end: EndNode,
 };
 
 const AutomationBuilder = () => {
@@ -96,33 +111,50 @@ const AutomationBuilder = () => {
           throw new Error("Invalid node type dropped");
         }
   
-        const position = screenToFlowPosition({
-          x: event.clientX,
-          y: event.clientY,
+        const nodeInfo = nodeConfigs[type];
+        if (!nodeInfo) return;
+  
+        setNodes((nds) => {
+          const lastNode = nds[nds.length - 1];
+  
+          // to stack nodes vertically
+          const position = lastNode
+            ? {
+                x: lastNode.position.x,
+                y: lastNode.position.y + 80,
+              }
+            : screenToFlowPosition({
+                x: event.clientX,
+                y: event.clientY,
+              });
+  
+          const newNode: Node = {
+            id: getId(),
+            type: nodeInfo.type,
+            position,
+            data: { ...nodeInfo },
+          };
+          const updatedNodes = [...nds, newNode];
+  
+          setSelectedNode(newNode);
+          setIsModalOpen(true);
+  
+          // scroll down on node drop
+          if (reactFlowWrapper.current) {
+            reactFlowWrapper.current.scrollBy({
+              top: 150,
+              behavior: "smooth",
+            });
+          }
+  
+          return updatedNodes;
         });
-  
-        const newNode: Node = {
-          id: getId(),
-          type,
-          position,
-          data: { label: `${type} node` },
-        };
-  
-        setNodes((nds) => [...nds, newNode]);
-
-        setTimeout(() => {
-          fitView({ padding: 0.2 });
-        }, 0);
-  
-        setSelectedNode(newNode);
-        setIsModalOpen(true);
-  
       } catch (err: any) {
         console.error(err);
         setError(err.message || "Failed to create node");
       }
     },
-    [screenToFlowPosition, type, setNodes, fitView]
+    [screenToFlowPosition, type, setNodes]
   );
 
   // open modal on click
@@ -154,6 +186,22 @@ const AutomationBuilder = () => {
     [selectedNode, setNodes]
   );
 
+  const onNodesDelete = useCallback(
+    (deleted) => {
+      const deletableNodes = deleted.filter((node) => node.type !== "start");
+      setNodes((nds) =>
+        nds.filter((n) => !deletableNodes.some((d) => d.id === n.id))
+      );
+      setEdges((eds) =>
+        eds.filter(
+          (e) =>
+            !deletableNodes.some((d) => d.id === e.source || d.id === e.target)
+        )
+      );
+    },
+    [setNodes, setEdges]
+  );
+
   return (
     <div className="automation-builder">
       <Sidebar />
@@ -164,9 +212,11 @@ const AutomationBuilder = () => {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onNodesDelete={onNodesDelete}
           onNodeClick={onNodeClick}
-          //onNodeDoubleClick={onNodeClick}
-          fitView
+          // onNodeDoubleClick={onNodeClick}
+          // fitView
+          defaultViewport={{ x: 0, y: 0, zoom: 2 }}
           className="overview"
           onDrop={onDrop}
           onNodeDragStop={onNodeDragStop}
