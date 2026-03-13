@@ -19,6 +19,7 @@ import {
 import Sidebar from "./Sidebar";
 import RightPanel from "./RightPanel";
 import NodeModal from "./NodeModal";
+import WorkflowModal from "./WorkflowModal"
 import {
   TriggerNode,
   WebhookNode,
@@ -30,7 +31,7 @@ import {
 } from "./nodes";
 import { useDnD } from "@/app/contexts/DnDContext";
 import { handleNodeDrop, fitViewOnEvent } from "@/app/services/dndService";
-import {Workflow, saveWorkflow, exportWorkflow, getWorkflow} from "@/app/services/workflowService"
+import { Workflow, saveWorkflow, exportWorkflow, getWorkflow, deleteWorkflow, updateWorkflow } from "@/app/services/workflowService"
 import { deleteNodes } from "@/app/services/nodeService";
 
 import { defaultWorkflow } from "@/app/static/templates/defaultWorkflow";
@@ -38,9 +39,6 @@ import { emailWorkflow } from "@/app/static/templates/emailWorkflow";
 
 import "@xyflow/react/dist/style.css";
 import "./styles.css";
-
-let id = 0;
-const getId = () => `dndnode_${id++}`;
 
 // list of possible node types
 const nodeTypes: NodeTypes = {
@@ -68,13 +66,15 @@ const AutomationBuilder = () => {
 
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [selectedWorkflow, setSelectedWorkflow] = useState<any>(defaultWorkflow);
-  const [workflowType, setWorkflowType] = useState<"blank" | "email" | "existing">("blank");
 
-  const workflowTemplates: Record<"blank" | "email", typeof defaultWorkflow> = {
-    blank: defaultWorkflow,
-    email: emailWorkflow,
-  };
+  const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
+  const [currentWorkflowId, setCurrentWorkflowId] = useState<string | null>(null);
+  const [workflowMeta, setWorkflowMeta] = useState({
+    name: "",
+    description: ""
+  });
 
+  // Load all the workflows
   useEffect(() => {
     const fetchAllWorkflows = async () => {
       try {
@@ -84,18 +84,18 @@ const AutomationBuilder = () => {
         console.error(err);
       }
     };
-  
+
     fetchAllWorkflows();
   }, []);
 
-  // Load the template workflow
+  // Load the template or selected workflow
   useEffect(() => {
     try {
-      if (!selectedWorkflow || !selectedWorkflow.nodes ) {
+      if (!selectedWorkflow || !selectedWorkflow.nodes) {
         throw new Error("Workflow template is invalid or missing nodes/edges");
       }
       const validNodes = selectedWorkflow.nodes.filter(Boolean);
-  
+
       setNodes([...validNodes]);
       setEdges([...selectedWorkflow.edges]);
     } catch (err: any) {
@@ -105,7 +105,6 @@ const AutomationBuilder = () => {
     }
   }, [selectedWorkflow, setNodes, setEdges]);
 
-  // various callbacks
   const onConnect: OnConnect = useCallback(
     (params) => {
       try {
@@ -157,7 +156,7 @@ const AutomationBuilder = () => {
     [screenToFlowPosition, type, nodes, setNodes]
   );
 
-  // open modal on click
+  // open modal on node click
   const onNodeClick = (_, node) => {
     setSelectedNode(node);
     setIsModalOpen(true);
@@ -177,7 +176,7 @@ const AutomationBuilder = () => {
     [nodes, edges, setNodes, setEdges]
   );
 
-  //persist changes in worflow state
+  //persist changes in worflow state -> save node properties
   const handleSaveNode = useCallback(
     (formData: Record<string, any>) => {
       if (!selectedNode) return;
@@ -198,53 +197,116 @@ const AutomationBuilder = () => {
     [selectedNode, setNodes]
   );
 
-  const handleSaveWorkflow = useCallback(async () => {
-    try {
-      if (!nodes.length || !edges.length) {
-        throw new Error("Cannot save workflow: nodes or edges are empty");
-      }
-  
-      const workflow: Workflow = {
-        name: "Autoflow",
-        nodes,
-        edges,
-      };
-  
-      const saved = await saveWorkflow(workflow);
-  
-      alert(`Workflow saved successfully! ID: ${saved.id}`);
-    } catch (err: any) {
-      console.error("Save workflow failed:", err);
-      alert(err.message || "Error saving workflow");
-    }
-  }, [nodes, edges]);
+  const openWorkflowModal = () => setWorkflowModalOpen(true);
 
   const handleExportWorkflow = useCallback(() => {
     const workflow: Workflow = { nodes, edges, name: "Autoflow" };
     exportWorkflow(workflow);
   }, [nodes, edges]);
 
-  const handleSelectTemplate = (template) => {
-    const selected = workflowTemplates[template];
-    if (!selected) {
-      console.error("Template not found:", template);
-      return;
-    }
-    setSelectedWorkflow(selected);
-    setWorkflowType(template);
-    fitViewOnEvent(fitView);
-  }
+  const handleSelectTemplate = (type: "blank" | "email") => {
+    if (type === "blank") setSelectedWorkflow(defaultWorkflow);
+    if (type === "email") setSelectedWorkflow(emailWorkflow);
+
+    setCurrentWorkflowId(null);
+    setWorkflowMeta({ name: "", description: "" });
+  };
+
+  // On selecting existing workflow from db
+  const handleSelectWorkflow = async (id: string) => {
+    try {
+      const data = await getWorkflow(id);
   
+      // Map nodes from DB to React Flow format
+      const mappedNodes = (data.nodes || []).map((n) => ({
+        id: n.id,
+        type: n.type,
+        position: { x: n.position_x ?? 0, y: n.position_y ?? 0 },
+        data: n.data ?? {},
+      }));
+  
+      setNodes(mappedNodes);
+  
+      setEdges(data.edges || []);
+  
+      setCurrentWorkflowId(id);
+      setWorkflowMeta({
+        name: data.workflow?.name || "",
+        description: data.workflow?.description || "",
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleWorkflowSubmit = async (name: string, description: string) => {
+    try {
+
+      if (currentWorkflowId) {
+        // UPDATE existing workflow
+        await updateWorkflow(
+          currentWorkflowId,
+          name,
+          description,
+          nodes,
+          edges
+        );
+        alert("Workflow updated!");
+
+      } else {
+        // CREATE new workflow
+        const workflow: Workflow = {
+          name,
+          description,
+          nodes,
+          edges,
+        };
+        await saveWorkflow(workflow);
+        alert("Workflow created!");
+      }
+      setWorkflowModalOpen(false);
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteWorkflow = async (id: string) => {
+    try {
+      const confirmed = window.confirm("Are you sure you want to delete this workflow?");
+      if (!confirmed) return;
+  
+      // Delete from DB
+      await deleteWorkflow(id);
+  
+      // Remove from local state
+      setWorkflows((prev) => prev.filter((wf) => wf.id !== id));
+  
+      // reset canvas
+      if (currentWorkflowId === id) {
+        setCurrentWorkflowId(null);
+        setNodes([]);
+        setEdges([]);
+        setWorkflowMeta({ name: "", description: "" });
+      }
+  
+      alert("Workflow deleted!");
+    } catch (err: any) {
+      console.error("Failed to delete workflow:", err);
+      alert(err.message || "Error deleting workflow");
+    }
+  };
+
 
 
   return (
     <div className="automation-builder">
       <Sidebar />
       <div className="workflow-actions">
-        <button onClick={handleSaveWorkflow}>Save</button>
-        <button onClick={handleExportWorkflow}>Export</button>
+        <button data-testid="open-workflow-modal-btn" onClick={openWorkflowModal}>Save</button>
+        <button data-testid="export-workflow-btn" onClick={handleExportWorkflow}>Export</button>
       </div>
-      <div className="reactflow-wrapper" ref={reactFlowWrapper}>
+      <div className="reactflow-wrapper" ref={reactFlowWrapper} data-testid="reactflow-wrapper-test">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -278,8 +340,16 @@ const AutomationBuilder = () => {
       <RightPanel
         workflows={workflows}
         onSelectTemplate={handleSelectTemplate}
-        // onSelectWorkflow={handleSelectWorkflow}
+        onSelectWorkflow={handleSelectWorkflow}
+        onDeleteWorkflow={handleDeleteWorkflow}
       />
+      {workflowModalOpen && <WorkflowModal
+        isOpen={workflowModalOpen}
+        initialName={workflowMeta.name}
+        initialDescription={workflowMeta.description}
+        onClose={() => setWorkflowModalOpen(false)}
+        onSave={handleWorkflowSubmit}
+      />}
     </div>
   );
 };

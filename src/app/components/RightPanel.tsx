@@ -4,16 +4,16 @@ import { FiArrowLeft, FiArrowRight, FiEdit, FiTrash2, FiFile } from "react-icons
 
 interface RightPanelProps {
   workflows: any[];
-  // onSelectTemplate: (templateName: "blank" | "email") => void;
-  // onSelectWorkflow: (workflowId: string) => void;
-  // onDeleteWorkflow: (workflowId: string) => void;
+  onSelectTemplate: (templateName: "blank" | "email") => void;
+  onSelectWorkflow: (workflowId: string) => void;
+  onDeleteWorkflow: (workflowId: string) => void;
 }
 
 export default function RightPanel({
   workflows,
-  // onSelectWorkflow,
-  // onSelectTemplate,
-  // onDeleteWorkflow
+  onSelectWorkflow,
+  onSelectTemplate,
+  onDeleteWorkflow
 }: RightPanelProps) {
   const [collapsed, setCollapsed] = useState<boolean>(false);
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function RightPanel({
             <div className="workflowActions">
               <button
                 title="Use template"
-                // onClick={() => onSelectTemplate("email")}
+                onClick={() => onSelectTemplate("email")}
                 className="iconBtn"
               >
                 <FiEdit />
@@ -84,14 +84,14 @@ export default function RightPanel({
               <div className="workflowActions">
                 <button
                   title="Edit workflow"
-                  // onClick={() => onSelectWorkflow(wf.id)}
+                  onClick={() => onSelectWorkflow(wf.id)}
                   className="iconBtn"
                 >
                   <FiEdit />
                 </button>
                 <button
                   title="Delete workflow"
-                  // onClick={() => onDeleteWorkflow(wf.id)}
+                  onClick={() => onDeleteWorkflow(wf.id)}
                   className="iconBtn"
                 >
                   <FiTrash2 />
