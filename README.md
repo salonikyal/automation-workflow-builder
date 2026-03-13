@@ -122,7 +122,40 @@ Potential improvements that could be added later:
 
 ---
 
-# Database Setup
+# Installation
+
+## Prerequisites
+
+- Node.js 22
+- PostgreSQL
+
+Use the correct Node version:
+
+```
+nvm use
+```
+
+Install dependencies:
+
+```
+npm install
+```
+
+Start the development server:
+
+```
+npm run dev
+```
+
+Open the application at:
+
+```
+http://localhost:3000
+```
+
+---
+
+# Database
 
 ## Database Schema
 A very simple schema was designed to support the basic workflow functionalities:
@@ -158,7 +191,39 @@ WORKFLOWS ||--o{ EDGES : contains
 ```
 
 ---
+## Database Setup
 
+If PostgreSQL is not installed on your system, please follow the official installation guide here: [PostgreSQL Installation](https://www.postgresql.org/download/).
+
+Once PostgreSQL is installed:
+
+1. Open your terminal and connect to PostgreSQL as the `postgres` user (or a user of your choice):
+
+```bash
+psql -U postgres
+```
+
+2. Create the database for the workflows:
+
+```sql
+CREATE DATABASE workflow_db;
+```
+
+3. Connect to the database:
+
+```sql
+\c workflow_db
+```
+
+4. Run the SQL script provided in this repository to create the required tables (`workflows`, `nodes`, `edges`):
+
+```sql
+\i path/to/create_tables.sql
+```
+
+> Replace `path/to/create_tables.sql` with the actual path to the SQL script in your project.
+
+---
 ## Database Initialization
 
 A SQL script is included(sent over email) to create the required tables.
@@ -184,40 +249,7 @@ PG_PORT=5432
 
 ---
 
-# Installation
-
-## Prerequisites
-
-- Node.js 22
-- PostgreSQL
-
-Use the correct Node version:
-
-```
-nvm use
-```
-
-Install dependencies:
-
-```
-npm install
-```
-
-Start the development server:
-
-```
-npm run dev
-```
-
-Open the application at:
-
-```
-http://localhost:3000
-```
-
----
-
-# Health Check
+## Health Check
 
 A health endpoint is available to verify the database connection.
 
