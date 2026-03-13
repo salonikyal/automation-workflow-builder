@@ -76,7 +76,7 @@ export default function RightPanel({
             </div>
           </div>
 
-          {/* Saved workflows */}
+          {/* DB workflows */}
           {workflows.map((wf) => (
             <div key={wf.id} className="workflowItem">
               <FiFile className="workflowIcon" />

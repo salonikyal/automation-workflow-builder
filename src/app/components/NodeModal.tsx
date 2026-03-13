@@ -10,7 +10,6 @@ type NodeModalProps = {
 };
 
 export default function NodeModal({ node, onSave, onClose }: NodeModalProps) {
-    const [label, setLabel] = useState(node.data.label || "");
     const config = node.data || { fields: [] };
     const [formData, setFormData] = useState<Record<string, any>>({ ...node.data });
     const [error, setError] = useState<string | null>(null);
@@ -44,29 +43,29 @@ export default function NodeModal({ node, onSave, onClose }: NodeModalProps) {
                     type="text"
                     value={formData.label || ""}
                     onChange={(e) => updateField("label", e.target.value)}
-                     autoFocus
+                    autoFocus
                 />
 
                 {/* Render dynamic fields */}
                 {config.fields.map((field) => {
-                if (field.name === "label") return null; // already rendered
-                return (
-                    <div key={field.name} style={{ marginTop: "8px" }}>
-                    <label>{field.label}</label>
-                    {field.type === "textarea" ? (
-                        <textarea
-                        value={formData[field.name] || ""}
-                        onChange={(e) => updateField(field.name, e.target.value)}
-                        />
-                    ) : (
-                        <input
-                        type={field.type}
-                        value={formData[field.name] || ""}
-                        onChange={(e) => updateField(field.name, e.target.value)}
-                        />
-                    )}
-                    </div>
-                );
+                    if (field.name === "label") return null; // already rendered
+                    return (
+                        <div key={field.name} style={{ marginTop: "8px" }}>
+                            <label>{field.label}</label>
+                            {field.type === "textarea" ? (
+                                <textarea
+                                    value={formData[field.name] || ""}
+                                    onChange={(e) => updateField(field.name, e.target.value)}
+                                />
+                            ) : (
+                                <input
+                                    type={field.type}
+                                    value={formData[field.name] || ""}
+                                    onChange={(e) => updateField(field.name, e.target.value)}
+                                />
+                            )}
+                        </div>
+                    );
                 })}
                 {/* Inline warning */}
                 {error && <p className="modal-error">{error}</p>}

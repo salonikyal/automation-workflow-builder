@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;  
+    const { id } = await params;
     const data = await getWorkflow(id);
     return NextResponse.json(data);
   } catch (err: any) {
@@ -21,7 +21,7 @@ export async function GET(
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { nodes, edges, name, description } = await req.json();
-    const { id } = await params;  
+    const { id } = await params;
     const result = await updateWorkflow(id, nodes, edges, { name, description });
     return NextResponse.json(result);
   } catch (err: any) {
@@ -31,7 +31,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;  
+    const { id } = await params;
     const result = await deleteWorkflow(id);
     return NextResponse.json(result);
   } catch (err: any) {
