@@ -24,6 +24,16 @@ export async function createWorkflow(name: string, description: string) {
     }
 }
 
+export async function getAllWorkflows() {
+  try {
+    const result = await pool.query(`SELECT * FROM workflows ORDER BY created_at DESC`);
+    return result.rows;
+  } catch (err) {
+    console.error("Get all workflows error:", err);
+    throw err;
+  }
+}
+
 export async function getWorkflow(workflowId: string) {
     if (!workflowId) throw new Error("Workflow ID required");
 
@@ -55,16 +65,6 @@ export async function getWorkflow(workflowId: string) {
     } catch (err) {
         console.error("Get workflow error:", err);
         throw err;
-    }
-}
-
-export async function getAllWorkflows() {
-    try {
-      const result = await pool.query(`SELECT * FROM workflows ORDER BY created_at DESC`);
-      return result.rows;
-    } catch (err) {
-      console.error("Get all workflows error:", err);
-      throw err;
     }
 }
 

@@ -11,6 +11,19 @@ export interface Workflow {
   metadata?: Record<string, any>;
 }
 
+export const exportWorkflow = (workflow: Workflow) => {
+  const workflowData = JSON.stringify(workflow, null, 2);
+  const blob = new Blob([workflowData], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = workflow.name ? `${workflow.name}.json` : "workflow.json";
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+// CREATE
 export const saveWorkflow = async (workflow: Workflow) => {
   try {
     const res = await fetch(API_BASE, {
@@ -28,6 +41,7 @@ export const saveWorkflow = async (workflow: Workflow) => {
   }
 };
 
+// RETRIEVE
 export const getWorkflow = async (id?: string): Promise<Workflow | Workflow[]> => {
   try {
     const url = id ? `${API_BASE}/${id}` : API_BASE;
@@ -40,29 +54,7 @@ export const getWorkflow = async (id?: string): Promise<Workflow | Workflow[]> =
   }
 };
 
-export const deleteWorkflow = async (id: string) => {
-  try {
-    const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("Failed to delete workflow");
-    return await res.json();
-  } catch (err: any) {
-    console.error("Workflow delete error:", err);
-    throw err;
-  }
-};
-
-export const exportWorkflow = (workflow: Workflow) => {
-  const workflowData = JSON.stringify(workflow, null, 2);
-  const blob = new Blob([workflowData], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = workflow.name ? `${workflow.name}.json` : "workflow.json";
-  link.click();
-  URL.revokeObjectURL(url);
-};
-
+// UPDATE
 export const updateWorkflow = async (id: string, name: string, description: string, nodes: Node[], edges: Edge[]) => {
   try {
     const res = await fetch(`${API_BASE}/${id}`, {
@@ -76,6 +68,18 @@ export const updateWorkflow = async (id: string, name: string, description: stri
     return await res.json();
   } catch (err: any) {
     console.error("Workflow update error:", err);
+    throw err;
+  }
+};
+
+// DELETE
+export const deleteWorkflow = async (id: string) => {
+  try {
+    const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("Failed to delete workflow");
+    return await res.json();
+  } catch (err: any) {
+    console.error("Workflow delete error:", err);
     throw err;
   }
 };

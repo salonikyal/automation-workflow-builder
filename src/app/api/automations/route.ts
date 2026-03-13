@@ -14,17 +14,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const { name, description, nodes, edges } = await req.json();
-
     if (!nodes || !edges) {
       return NextResponse.json({ error: "Nodes and edges are required" }, { status: 400 });
     }
-
-    // 1. Create workflow row
+    // Create workflow row
     const workflow = await createWorkflow(name || "New Workflow", description || "");
-
-    // 2. Save nodes and edges
+    // Save nodes and edges
     await updateWorkflow(workflow.id, nodes, edges, { name, description });
-
     return NextResponse.json({ id: workflow.id, success: true });
   } catch (err: any) {
     console.error("POST /api/automations error:", err);

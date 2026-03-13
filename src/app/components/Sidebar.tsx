@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { FiArrowLeft, FiArrowRight} from "react-icons/fi";
+import { FiArrowLeft, FiArrowRight } from "react-icons/fi";
 import { useDnD } from "@/app/contexts/DnDContext";
 import { nodeList } from "@/app/static/nodeConfigs";
 import "./styles.css";
 
 const Sidebar = () => {
   const { setType } = useDnD();
-  
+
   // Responsive collapse state
   const [collapsed, setCollapsed] = useState<boolean>(false);
   useEffect(() => {

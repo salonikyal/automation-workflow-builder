@@ -28,9 +28,9 @@ export default function BaseNode({ id, data, type }: BaseNodeProps) {
       {/* Start node has no input */}
       {type !== "start" && <Handle type="target" position={Position.Top} />}
       {/* Condition node has 2 bottom handles */}
-      {type === "condition" && 
-        <><Handle id="true" type="source" position={Position.Bottom} style={{ left: "30%" }}/>
-        <Handle id="false" type="source" position={Position.Bottom} style={{ left: "70%" }}/></>
+      {type === "condition" &&
+        <><Handle id="true" type="source" position={Position.Bottom} style={{ left: "30%" }} />
+          <Handle id="false" type="source" position={Position.Bottom} style={{ left: "70%" }} /></>
       }
       {/* End node has no output */}
       {type !== "end" && type !== "condition" && <Handle type="source" position={Position.Bottom} />}

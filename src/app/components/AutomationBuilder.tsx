@@ -1,38 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  addEdge,
-  Background,
-  Controls,
-  MiniMap,
-  Node,
-  Edge,
-  NodeTypes,
-  OnConnect,
-  ReactFlow,
-  useEdgesState,
-  useNodesState,
-  useReactFlow,
-} from "@xyflow/react";
+import { addEdge, Background, Controls, MiniMap, Node, Edge, NodeTypes, OnConnect, ReactFlow, useEdgesState, useNodesState, useReactFlow } from "@xyflow/react";
 
+import { TriggerNode, WebhookNode, ConditionNode, DelayNode, EmailNode, TransformNode, EndNode } from "./nodes";
 import Sidebar from "./Sidebar";
 import RightPanel from "./RightPanel";
 import NodeModal from "./NodeModal";
 import WorkflowModal from "./WorkflowModal"
-import {
-  TriggerNode,
-  WebhookNode,
-  ConditionNode,
-  DelayNode,
-  EmailNode,
-  TransformNode,
-  EndNode
-} from "./nodes";
-import { useDnD } from "@/app/contexts/DnDContext";
-import { handleNodeDrop, fitViewOnEvent } from "@/app/services/dndService";
+
 import { Workflow, saveWorkflow, exportWorkflow, getWorkflow, deleteWorkflow, updateWorkflow } from "@/app/services/workflowService"
+import { handleNodeDrop, fitViewOnEvent } from "@/app/services/dndService";
 import { deleteNodes } from "@/app/services/nodeService";
+import { useDnD } from "@/app/contexts/DnDContext";
 
 import { defaultWorkflow } from "@/app/static/templates/defaultWorkflow";
 import { emailWorkflow } from "@/app/static/templates/emailWorkflow";
@@ -69,10 +49,7 @@ const AutomationBuilder = () => {
 
   const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
   const [currentWorkflowId, setCurrentWorkflowId] = useState<string | null>(null);
-  const [workflowMeta, setWorkflowMeta] = useState({
-    name: "",
-    description: ""
-  });
+  const [workflowMeta, setWorkflowMeta] = useState({name: "", description: ""});
 
   // Load all the workflows
   useEffect(() => {
@@ -84,7 +61,6 @@ const AutomationBuilder = () => {
         console.error(err);
       }
     };
-
     fetchAllWorkflows();
   }, []);
 
@@ -95,7 +71,6 @@ const AutomationBuilder = () => {
         throw new Error("Workflow template is invalid or missing nodes/edges");
       }
       const validNodes = selectedWorkflow.nodes.filter(Boolean);
-
       setNodes([...validNodes]);
       setEdges([...selectedWorkflow.edges]);
     } catch (err: any) {
@@ -122,7 +97,7 @@ const AutomationBuilder = () => {
     event.dataTransfer.dropEffect = "move";
   }, []);
 
-  const onNodeDragStop = useCallback(() => {
+  const onDragStop = useCallback(() => {
     setTimeout(() => {
       fitView({ padding: 0.2, duration: 500 });
     }, 0);
@@ -162,6 +137,7 @@ const AutomationBuilder = () => {
     setIsModalOpen(true);
   };
 
+  // delete node from workflow using keyboard
   const onNodesDelete = useCallback(
     (deletedNodes: Node[]) => {
       const deletableNodes = deletedNodes.filter((n) => n.type !== "start");
@@ -176,7 +152,7 @@ const AutomationBuilder = () => {
     [nodes, edges, setNodes, setEdges]
   );
 
-  //persist changes in worflow state -> save node properties
+  // persist changes in worflow state > save node properties
   const handleSaveNode = useCallback(
     (formData: Record<string, any>) => {
       if (!selectedNode) return;
@@ -197,13 +173,12 @@ const AutomationBuilder = () => {
     [selectedNode, setNodes]
   );
 
-  const openWorkflowModal = () => setWorkflowModalOpen(true);
-
   const handleExportWorkflow = useCallback(() => {
     const workflow: Workflow = { nodes, edges, name: "Autoflow" };
     exportWorkflow(workflow);
   }, [nodes, edges]);
 
+  // On selecting template workflow from RightPanel
   const handleSelectTemplate = (type: "blank" | "email") => {
     if (type === "blank") setSelectedWorkflow(defaultWorkflow);
     if (type === "email") setSelectedWorkflow(emailWorkflow);
@@ -212,11 +187,11 @@ const AutomationBuilder = () => {
     setWorkflowMeta({ name: "", description: "" });
   };
 
-  // On selecting existing workflow from db
+  // On selecting existing DB workflow from RightPanel
   const handleSelectWorkflow = async (id: string) => {
     try {
       const data = await getWorkflow(id);
-  
+
       // Map nodes from DB to React Flow format
       const mappedNodes = (data.nodes || []).map((n) => ({
         id: n.id,
@@ -224,11 +199,11 @@ const AutomationBuilder = () => {
         position: { x: n.position_x ?? 0, y: n.position_y ?? 0 },
         data: n.data ?? {},
       }));
-  
+
       setNodes(mappedNodes);
-  
+
       setEdges(data.edges || []);
-  
+
       setCurrentWorkflowId(id);
       setWorkflowMeta({
         name: data.workflow?.name || "",
@@ -239,6 +214,9 @@ const AutomationBuilder = () => {
     }
   };
 
+  const openWorkflowModal = () => setWorkflowModalOpen(true);
+
+  // Add new workflow (POST) or update existing workflow (PUT) in DB
   const handleWorkflowSubmit = async (name: string, description: string) => {
     try {
 
@@ -275,13 +253,13 @@ const AutomationBuilder = () => {
     try {
       const confirmed = window.confirm("Are you sure you want to delete this workflow?");
       if (!confirmed) return;
-  
+
       // Delete from DB
       await deleteWorkflow(id);
-  
+
       // Remove from local state
       setWorkflows((prev) => prev.filter((wf) => wf.id !== id));
-  
+
       // reset canvas
       if (currentWorkflowId === id) {
         setCurrentWorkflowId(null);
@@ -289,7 +267,7 @@ const AutomationBuilder = () => {
         setEdges([]);
         setWorkflowMeta({ name: "", description: "" });
       }
-  
+
       alert("Workflow deleted!");
     } catch (err: any) {
       console.error("Failed to delete workflow:", err);
@@ -320,7 +298,7 @@ const AutomationBuilder = () => {
           //defaultViewport={{ x: 0, y: 0, zoom: 2 }}
           className="overview"
           onDrop={onDrop}
-          onNodeDragStop={onNodeDragStop}
+          onNodeDragStop={onDragStop}
           onDragOver={onDragOver}
           nodeTypes={nodeTypes}
         >
