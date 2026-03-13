@@ -33,3 +33,9 @@ export const handleNodeDrop = (
             behavior: "smooth",
         });
 };
+
+export const fitViewOnEvent = (fitView) => {
+    setTimeout(() => {
+        fitView({ padding: 0.2, duration: 500 });
+      }, 0);
+}

@@ -17,6 +17,7 @@ import {
 } from "@xyflow/react";
 
 import Sidebar from "./Sidebar";
+import RightPanel from "./RightPanel";
 import NodeModal from "./NodeModal";
 import {
   TriggerNode,
@@ -28,11 +29,12 @@ import {
   EndNode
 } from "./nodes";
 import { useDnD } from "@/app/contexts/DnDContext";
-import { handleNodeDrop } from "@/app/services/dndService";
+import { handleNodeDrop, fitViewOnEvent } from "@/app/services/dndService";
 import {Workflow, saveWorkflow, exportWorkflow, getWorkflow} from "@/app/services/workflowService"
-import { emailWorkflow } from "@/app/static/templates/emailWorkflow";
 import { deleteNodes } from "@/app/services/nodeService";
 
+import { defaultWorkflow } from "@/app/static/templates/defaultWorkflow";
+import { emailWorkflow } from "@/app/static/templates/emailWorkflow";
 
 import "@xyflow/react/dist/style.css";
 import "./styles.css";
@@ -59,13 +61,19 @@ const AutomationBuilder = () => {
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-  const [workflowId, setWorkflowId] = useState<number | null>(null);
 
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [selectedWorkflow, setSelectedWorkflow] = useState<any>(defaultWorkflow);
+  const [workflowType, setWorkflowType] = useState<"blank" | "email" | "existing">("blank");
+
+  const workflowTemplates: Record<"blank" | "email", typeof defaultWorkflow> = {
+    blank: defaultWorkflow,
+    email: emailWorkflow,
+  };
 
   useEffect(() => {
     const fetchAllWorkflows = async () => {
@@ -83,19 +91,19 @@ const AutomationBuilder = () => {
   // Load the template workflow
   useEffect(() => {
     try {
-      if (!emailWorkflow || !emailWorkflow.nodes || !emailWorkflow.edges) {
+      if (!selectedWorkflow || !selectedWorkflow.nodes ) {
         throw new Error("Workflow template is invalid or missing nodes/edges");
       }
-      const validNodes = emailWorkflow.nodes.filter(Boolean);
+      const validNodes = selectedWorkflow.nodes.filter(Boolean);
   
       setNodes([...validNodes]);
-      setEdges([...emailWorkflow.edges]);
+      setEdges([...selectedWorkflow.edges]);
     } catch (err: any) {
       console.error("Failed to load workflow template:", err);
       setNodes([]);
       setEdges([]);
     }
-  }, [setNodes, setEdges]);
+  }, [selectedWorkflow, setNodes, setEdges]);
 
   // various callbacks
   const onConnect: OnConnect = useCallback(
@@ -139,6 +147,7 @@ const AutomationBuilder = () => {
           setSelectedNode,
           setIsModalOpen
         );
+        fitViewOnEvent(fitView);
 
       } catch (err: any) {
         console.error(err);
@@ -214,6 +223,17 @@ const AutomationBuilder = () => {
     const workflow: Workflow = { nodes, edges, name: "Autoflow" };
     exportWorkflow(workflow);
   }, [nodes, edges]);
+
+  const handleSelectTemplate = (template) => {
+    const selected = workflowTemplates[template];
+    if (!selected) {
+      console.error("Template not found:", template);
+      return;
+    }
+    setSelectedWorkflow(selected);
+    setWorkflowType(template);
+    fitViewOnEvent(fitView);
+  }
   
 
 
@@ -255,6 +275,11 @@ const AutomationBuilder = () => {
           onSave={handleSaveNode}
         />
       )}
+      <RightPanel
+        workflows={workflows}
+        onSelectTemplate={handleSelectTemplate}
+        // onSelectWorkflow={handleSelectWorkflow}
+      />
     </div>
   );
 };
